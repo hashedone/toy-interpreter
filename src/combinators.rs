@@ -1,12 +1,12 @@
-use crate::{Operator, Factor, Result, Assignment};
+use crate::{Operator, Factor, Result, Assignment, Token};
 
 #[derive(Debug, PartialEq)]
-struct ParseProgress<'a, T> {
-    tail: &'a str,
-    token: Option<T>,
+pub struct ParseProgress<'a, T> {
+    pub tail: &'a str,
+    pub token: Option<T>,
 }
 
-type ParseResult<'a, T> = Result<ParseProgress<'a, T>>;
+pub type ParseResult<'a, T> = Result<ParseProgress<'a, T>>;
 
 impl<'a, T> ParseProgress<'a, T> {
     fn none(tail: &'a str) -> ParseResult<'a, T> {
@@ -73,36 +73,34 @@ fn identifier(src: &str) -> ParseResult<&str> {
     }
 }
 
-fn operator(src: &str) -> ParseResult<Operator> {
-    let op = match src {
-        _ if src.starts_with('+') => Operator::Add,
-        _ if src.starts_with('-') => Operator::Sub,
-        _ if src.starts_with('*') => Operator::Mul,
-        _ if src.starts_with('/') => Operator::Div,
-        _ if src.starts_with('%') => Operator::Mod,
+pub fn next_token(src: &str) -> ParseResult<Token> {
+    let id = identifier(src)?;
+    if let Some(tok) = id.token {
+        return ParseProgress::some(id.tail, Token::Id(tok.to_owned()));
+    }
+
+    let num = number(src)?;
+    if let Some(tok) = num.token {
+        return ParseProgress::some(num.tail, Token::Number(tok));
+    }
+
+    if src.starts_with("=>") {
+        return ParseProgress::some(&src[2..], Token::Func);
+    }
+
+    let tok = match src {
+        _ if src.starts_with('+') => Token::Operator(Operator::Add),
+        _ if src.starts_with('-') => Token::Operator(Operator::Sub),
+        _ if src.starts_with('*') => Token::Operator(Operator::Mul),
+        _ if src.starts_with('/') => Token::Operator(Operator::Div),
+        _ if src.starts_with('%') => Token::Operator(Operator::Mod),
+        _ if src.starts_with('=') => Token::Assign,
+        _ if src.starts_with('(') => Token::LBracket,
+        _ if src.starts_with(')') => Token::RBracket,
         _ => return ParseProgress::none(src),
     };
 
-    ParseProgress::some(&src[1..], op)
-}
-
-fn assignment(src: &str) -> ParseResult<Assignment> {
-    let (left, var) = assume!(identifier(src), src);
-    let left = left.trim_start();
-    let left =
-        if left.starts_with("=") { &left[1..] }
-        else { return ParseProgress::none(src) };
-    let left = left.trim_start();
-    let res = number(left)?;
-    let val = res.token.ok_or(
-        "Invalid right side of assignment - expected expression".to_owned()
-    )?;
-
-    ParseProgress::some(res.tail, Assignment { var: var.to_owned(), val })
-}
-
-fn factor(src: &str) -> Result<(&str, Option<Factor>)> {
-    unimplemented!()
+    return ParseProgress::some(&src[1..], tok);
 }
 
 #[cfg(test)]
@@ -133,30 +131,47 @@ fn test_identifier() {
 }
 
 #[test]
-fn test_operator() {
-    assert_eq!(ParseProgress::none(""), operator(""));
-    assert_eq!(ParseProgress::none("10"), operator("10"));
-    assert_eq!(ParseProgress::some("", Operator::Add), operator("+"));
-    assert_eq!(ParseProgress::some("", Operator::Sub), operator("-"));
-    assert_eq!(ParseProgress::some("", Operator::Mul), operator("*"));
-    assert_eq!(ParseProgress::some("", Operator::Div), operator("/"));
-    assert_eq!(ParseProgress::some("", Operator::Mod), operator("%"));
-    assert_eq!(ParseProgress::some("x", Operator::Mod), operator("%x"));
-}
-
-#[test]
-fn test_assignment() {
-    assert_eq!(ParseProgress::none(""), assignment(""));
-    assert_eq!(ParseProgress::none("10"), assignment("10"));
+fn test_next_token() {
+    assert_eq!(ParseProgress::none(""), next_token(""));
     assert_eq!(
-        ParseProgress::some("", Assignment::new("a", 10.0)),
-        assignment("a = 10")
+        ParseProgress::some("", Token::Operator(Operator::Add)),
+        next_token("+")
     );
     assert_eq!(
-        ParseProgress::some("x", Assignment::new("a", 10.0)),
-        assignment("a = 10x")
+        ParseProgress::some("", Token::Operator(Operator::Sub)),
+        next_token("-")
     );
-    assignment("a = =").unwrap_err();
+    assert_eq!(
+        ParseProgress::some("", Token::Operator(Operator::Mul)),
+        next_token("*")
+    );
+    assert_eq!(
+        ParseProgress::some("", Token::Operator(Operator::Div)),
+        next_token("/")
+    );
+    assert_eq!(
+        ParseProgress::some("", Token::Operator(Operator::Mod)),
+        next_token("%")
+    );
+    assert_eq!(
+        ParseProgress::some("", Token::LBracket),
+        next_token("(")
+    );
+    assert_eq!(
+        ParseProgress::some("", Token::RBracket),
+        next_token(")")
+    );
+    assert_eq!(
+        ParseProgress::some("", Token::Assign),
+        next_token("=")
+    );
+    assert_eq!(
+        ParseProgress::some("", Token::Func),
+        next_token("=>")
+    );
+    assert_eq!(
+        ParseProgress::some("x", Token::Operator(Operator::Mod)),
+        next_token("%x")
+    );
 }
-
 }

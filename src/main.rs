@@ -1,5 +1,6 @@
 mod statement;
 mod combinators;
+mod lexer;
 
 use statement::Statement;
 use std::io::{stdin, BufRead};
@@ -8,14 +9,7 @@ use std;
 type Error = String;
 type Result<T> = std::result::Result<T, String>;
 
-#[derive(Debug, PartialEq)]
-pub enum Operator {
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Mod,
-}
+pub use lexer::{Operator, Token};
 
 #[derive(Debug, PartialEq)]
 pub struct Assignment {
@@ -37,7 +31,7 @@ pub enum Factor {
     Expression, // Actually bracket expression
     Number(f32),
     Ident(String),
-    Assignment(String, ()), // TODO: second one is expression
+    Assignment(Assignment),
 }
 
 fn main() {
