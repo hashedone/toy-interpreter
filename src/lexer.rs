@@ -74,4 +74,20 @@ fn invalid() {
     tokenize("^").collect::<Result<Vec<_>, _>>().unwrap_err();
 }
 
+#[test]
+fn func() {
+    let src = "add x y => x + y";
+    let expected = vec![
+        Token::Id("add".to_owned()),
+        Token::Id("x".to_owned()),
+        Token::Id("y".to_owned()),
+        Token::Func,
+        Token::Id("x".to_owned()),
+        Token::Operator(Operator::Add),
+        Token::Id("y".to_owned()),
+    ];
+
+    assert_eq!(Ok(expected), tokenize(src).collect());
+}
+
 }

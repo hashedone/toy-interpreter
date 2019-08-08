@@ -57,7 +57,10 @@ fn number(src: &str) -> ParseResult<f32> {
 fn identifier(src: &str) -> ParseResult<&str> {
     if src.is_empty() {
         ParseProgress::none(src)
-    } else if src.starts_with('_') {
+    } else if
+        src.chars().next().unwrap().is_ascii_alphabetic() ||
+        src.starts_with('_')
+    {
         let first_not = src
             .find(|c: char| -> bool {
                 !(c == '_' || c.is_ascii_alphanumeric())
@@ -66,8 +69,6 @@ fn identifier(src: &str) -> ParseResult<&str> {
         let literal = &src[..first_not];
         let tail = &src[first_not..];
         ParseProgress::some(tail, literal)
-    } else if src.chars().next().unwrap().is_ascii_alphabetic() {
-        ParseProgress::some(&src[1..], &src[..1])
     } else {
         ParseProgress::none(src)
     }
@@ -76,7 +77,7 @@ fn identifier(src: &str) -> ParseResult<&str> {
 fn assignment(src: &str) -> ParseResult<&str> {
     let (tail, ident) = assume!(identifier(src), src);
     let tail = tail.trim_start();
-    if tail.starts_with('=') {
+    if tail.starts_with('=') && !tail.starts_with("=>") {
         ParseProgress::some(&tail[1..], ident)
     } else {
         ParseProgress::none(src)
@@ -143,7 +144,7 @@ fn test_identifier() {
     assert_eq!(ParseProgress::none(""), identifier(""));
     assert_eq!(ParseProgress::none("10"), identifier("10"));
     assert_eq!(ParseProgress::some("", "a"), identifier("a"));
-    assert_eq!(ParseProgress::some("b", "a"), identifier("ab"));
+    assert_eq!(ParseProgress::some("", "ab"), identifier("ab"));
     assert_eq!(ParseProgress::some("", "_ab"), identifier("_ab"));
     assert_eq!(ParseProgress::some(".", "_ab"), identifier("_ab."));
     assert_eq!(ParseProgress::some("", "__"), identifier("__"));
@@ -155,6 +156,7 @@ fn test_assignment() {
     assert_eq!(ParseProgress::none(""), assignment(""));
     assert_eq!(ParseProgress::none("x"), assignment("x"));
     assert_eq!(ParseProgress::some("", "x"), assignment("x ="));
+    assert_eq!(ParseProgress::none("x =>"), assignment("x =>"));
 }
 
 #[test]
@@ -199,6 +201,10 @@ fn test_next_token() {
     assert_eq!(
         ParseProgress::some("x", Token::Operator(Operator::Mod)),
         next_token("%x")
+    );
+    assert_eq!(
+        ParseProgress::some(" =>", Token::Id("x".to_owned())),
+        next_token("x =>")
     );
 
     next_token("10.0.4").unwrap_err();
