@@ -73,7 +73,28 @@ fn identifier(src: &str) -> ParseResult<&str> {
     }
 }
 
+fn assignment(src: &str) -> ParseResult<&str> {
+    let (tail, ident) = assume!(identifier(src), src);
+    let tail = tail.trim_start();
+    if tail.starts_with('=') {
+        ParseProgress::some(&tail[1..], ident)
+    } else {
+        ParseProgress::none(src)
+    }
+}
+
 pub fn next_token(src: &str) -> ParseResult<Token> {
+    if src.is_empty() {
+        return ParseProgress::none("");
+    }
+
+    let assign = assignment(src)?;
+    if let Some(tok) = assign.token {
+        return ParseProgress::some(
+            assign.tail, Token::Assign(tok.to_owned())
+        );
+    }
+
     let id = identifier(src)?;
     if let Some(tok) = id.token {
         return ParseProgress::some(id.tail, Token::Id(tok.to_owned()));
@@ -94,10 +115,9 @@ pub fn next_token(src: &str) -> ParseResult<Token> {
         _ if src.starts_with('*') => Token::Operator(Operator::Mul),
         _ if src.starts_with('/') => Token::Operator(Operator::Div),
         _ if src.starts_with('%') => Token::Operator(Operator::Mod),
-        _ if src.starts_with('=') => Token::Assign,
         _ if src.starts_with('(') => Token::LBracket,
         _ if src.starts_with(')') => Token::RBracket,
-        _ => return ParseProgress::none(src),
+        _ => return Err(format!("Invalid token: {}", src)),
     };
 
     return ParseProgress::some(&src[1..], tok);
@@ -128,6 +148,13 @@ fn test_identifier() {
     assert_eq!(ParseProgress::some(".", "_ab"), identifier("_ab."));
     assert_eq!(ParseProgress::some("", "__"), identifier("__"));
     assert_eq!(ParseProgress::some("", "_1"), identifier("_1"));
+}
+
+#[test]
+fn test_assignment() {
+    assert_eq!(ParseProgress::none(""), assignment(""));
+    assert_eq!(ParseProgress::none("x"), assignment("x"));
+    assert_eq!(ParseProgress::some("", "x"), assignment("x ="));
 }
 
 #[test]
@@ -162,8 +189,8 @@ fn test_next_token() {
         next_token(")")
     );
     assert_eq!(
-        ParseProgress::some("", Token::Assign),
-        next_token("=")
+        ParseProgress::some("", Token::Assign("x".to_owned())),
+        next_token("x =")
     );
     assert_eq!(
         ParseProgress::some("", Token::Func),
@@ -173,5 +200,8 @@ fn test_next_token() {
         ParseProgress::some("x", Token::Operator(Operator::Mod)),
         next_token("%x")
     );
+
+    next_token("10.0.4").unwrap_err();
+    next_token("=").unwrap_err();
 }
 }

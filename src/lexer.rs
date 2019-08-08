@@ -17,17 +17,17 @@ pub enum Token {
     Operator(Operator),
     LBracket,
     RBracket,
-    Assign,
+    Assign(String), // Assignment is actually bitoken including variable which is assigned to
     Func, // =>
 }
 
-fn tokenize<'a>(mut src: &'a str)
+pub fn tokenize<'a>(mut src: &'a str)
     -> impl Iterator<Item=Result<Token, String>> + 'a
 {
     iter::from_fn(move || {
         match next_token(src) {
             Ok(progress) => {
-                src = progress.tail;
+                src = progress.tail.trim_start();
                 progress.token.map(|token| Ok(token))
             },
             Err(err) => {
@@ -37,4 +37,41 @@ fn tokenize<'a>(mut src: &'a str)
         }
 
     })
+}
+
+#[cfg(test)]
+mod test {
+
+use super::*;
+
+#[test]
+fn empty() {
+    assert_eq!(None, tokenize("").next());
+}
+
+#[test]
+fn all_tokens() {
+    let src = "x 10.3 + - * / % () x = =>";
+    let expected = vec![
+        Token::Id("x".to_owned()),
+        Token::Number(10.3),
+        Token::Operator(Operator::Add),
+        Token::Operator(Operator::Sub),
+        Token::Operator(Operator::Mul),
+        Token::Operator(Operator::Div),
+        Token::Operator(Operator::Mod),
+        Token::LBracket,
+        Token::RBracket,
+        Token::Assign("x".to_owned()),
+        Token::Func,
+    ];
+
+    assert_eq!(Ok(expected), tokenize(src).collect());
+}
+
+#[test]
+fn invalid() {
+    tokenize("^").collect::<Result<Vec<_>, _>>().unwrap_err();
+}
+
 }
