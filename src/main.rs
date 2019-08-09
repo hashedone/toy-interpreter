@@ -1,6 +1,8 @@
 mod statement;
 mod combinators;
 mod lexer;
+mod context;
+mod parser;
 
 use statement::Statement;
 use std::io::{stdin, BufRead};
@@ -9,7 +11,8 @@ use std;
 type Error = String;
 type Result<T> = std::result::Result<T, String>;
 
-pub use lexer::{Operator, Token};
+use lexer::{Operator, Token};
+use context::Context;
 
 #[derive(Debug, PartialEq)]
 pub struct Assignment {
@@ -40,6 +43,8 @@ fn main() {
         .lines()
         .filter_map(|line| line.ok()) // Actually ignoring iostream errors
         .for_each(|line| {
-            println!("= {:?}", line)
+            let tokens = lexer::tokenize(&line)
+                .filter_map(|t| t.map_err(|t| println!("While parsing: {}", t)).ok());
+            println!("= {:?}", Context::new().parse(tokens))
         });
 }

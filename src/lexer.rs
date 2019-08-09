@@ -1,13 +1,38 @@
 use crate::combinators::next_token;
 use std::iter;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Operator {
     Add,
     Sub,
     Mul,
     Div,
     Mod,
+}
+
+impl Operator {
+    pub fn eval(&self, left: f32, right: f32) -> f32 {
+        match self {
+            Operator::Add => left + right,
+            Operator::Sub => left - right,
+            Operator::Mul => left * right,
+            Operator::Div => left / right,
+            Operator::Mod => ((left as i64) % (right as i64)) as f32
+        }
+    }
+}
+
+impl Operator {
+    /// Operator priority:
+    /// no operator = 0
+    /// Mul/Div/Mod = 1
+    /// Add/Sub = 2
+    pub fn priority(&self) -> u8 {
+        match self {
+            Operator::Add | Operator::Sub => 2,
+            Operator::Mul | Operator::Div | Operator::Mod => 1
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
