@@ -1,5 +1,7 @@
 I did couple changes (clarifications?) in this language comparing to kata, just to make the language more consistent.
 
+Usage: just `cargo run` and put expressions. No scripts implemented, no session saving. It is just a toy excercise, because why not.
+
 ## Assignment
 It is clear, that assignment itself is an expression and can be chained like:
 ```
