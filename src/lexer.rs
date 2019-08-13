@@ -12,7 +12,7 @@ pub enum Operator {
 }
 
 impl Operator {
-    pub fn eval(&self, left: f32, right: f32) -> f32 {
+    pub fn eval(self, left: f32, right: f32) -> f32 {
         match self {
             Operator::Add => left + right,
             Operator::Sub => left - right,
@@ -38,7 +38,7 @@ pub fn tokenize<'a>(mut src: &'a str) -> impl Iterator<Item = Result<Token>> + '
     iter::from_fn(move || match next_token(src) {
         Ok(progress) => {
             src = progress.tail.trim_start();
-            progress.token.map(|token| Ok(token))
+            progress.token.map(Ok)
         }
         Err(err) => {
             src = "";

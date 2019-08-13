@@ -56,25 +56,23 @@ impl Context {
     pub fn update_var(&mut self, var: impl ToString, val: f32) {
         self.symbols
             .entry(var.to_string())
-            .and_modify(|v| match v {
-                Symbol::Variable(ref mut v) => {
+            .and_modify(|v|
+                if let Symbol::Variable(ref mut v) = v {
                     *v = val;
                 }
-                _ => (),
-            })
+            )
             .or_insert(Symbol::Variable(val));
     }
 
     pub fn update_func(&mut self, func: &Function) {
         self.symbols
             .entry(func.name.clone())
-            .and_modify(|v| match v {
-                Symbol::Function(ref mut arity, ref mut expr) => {
+            .and_modify(|v|
+                if let Symbol::Function(ref mut arity, ref mut expr) = v {
                     *arity = func.arity;
                     *expr = func.expr.clone();
                 }
-                _ => (),
-            })
+            )
             .or_insert_with(|| Symbol::Function(func.arity, func.expr.clone()));
     }
 

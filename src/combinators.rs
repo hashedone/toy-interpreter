@@ -35,7 +35,7 @@ macro_rules! assume {
 fn number(src: &str) -> ParseResult<f32> {
     let first_not = src
         .find(|c| !"0123456789.".contains(c))
-        .unwrap_or(src.len());
+        .unwrap_or_else(|| src.len());
 
     if first_not == 0 {
         return ParseProgress::none(src);
@@ -62,7 +62,7 @@ fn identifier(src: &str) -> ParseResult<&str> {
     } else if src.chars().next().unwrap().is_ascii_alphabetic() || src.starts_with('_') {
         let first_not = src
             .find(|c: char| -> bool { !(c == '_' || c.is_ascii_alphanumeric()) })
-            .unwrap_or(src.len());
+            .unwrap_or_else(|| src.len());
         let literal = &src[..first_not];
         let tail = &src[first_not..];
         ParseProgress::some(tail, literal)
@@ -116,7 +116,7 @@ pub fn next_token(src: &str) -> ParseResult<Token> {
         _ => return Err(format!("Invalid token: {}", src)),
     };
 
-    return ParseProgress::some(&src[1..], tok);
+    ParseProgress::some(&src[1..], tok)
 }
 
 #[cfg(test)]

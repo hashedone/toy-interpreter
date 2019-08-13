@@ -53,7 +53,7 @@ impl AST for Terminal {
             .as_any()
             .downcast_ref::<Self>()
             .map_or(false, |o| match (self, o) {
-                (Terminal::Value(x), Terminal::Value(y)) => x == y,
+                (Terminal::Value(x), Terminal::Value(y)) => (x - y).abs() < 0.001,
                 (Terminal::Assign(v1, val1), Terminal::Assign(v2, val2)) => {
                     v1 == v2 && val1.is_same(val2.as_ref())
                 }
@@ -122,11 +122,7 @@ impl AST for CallExpr {
     }
 
     fn is_same(&self, other: &dyn AST) -> bool {
-        if other.as_any().downcast_ref::<Self>().is_some() {
-            true
-        } else {
-            false
-        }
+        other.as_any().downcast_ref::<Self>().is_some()
     }
 
     fn value(&self) -> Option<f32> {
@@ -334,7 +330,7 @@ impl CallExpr {
             let arity = context.get_arity(&name).unwrap_or(0);
             let func = context
                 .get_func(&name)
-                .ok_or(format!("No function named {}", name))?;
+                .ok_or_else(|| format!("No function named {}", name))?;
 
             let mut args = vec![];
             for _ in 0..arity {
@@ -365,7 +361,7 @@ impl Function {
         tokens: &mut Peekable<impl Iterator<Item = Token>>,
         context: &Context,
     ) -> Result<Box<dyn AST>> {
-        let name = Self::get_id(tokens).ok_or(format!(
+        let name = Self::get_id(tokens).ok_or_else(|| format!(
             "Expected function name, but got: {:?}",
             tokens.peek()
         ))?;
