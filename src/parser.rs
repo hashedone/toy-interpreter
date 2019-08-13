@@ -110,7 +110,7 @@ impl AST for CallExpr {
     fn as_any(&self) -> &dyn Any { self }
 
     fn is_same(&self, other: &dyn AST) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() {
+        if other.as_any().downcast_ref::<Self>().is_some() {
             true
         } else {
             false
@@ -148,7 +148,7 @@ impl AST for Function {
         None
     }
 
-    fn evaluate(&self, context: &mut Context, args: &[f32]) -> Option<f32> {
+    fn evaluate(&self, context: &mut Context, _args: &[f32]) -> Option<f32> {
         context.update_func(self);
         None
     }
@@ -336,7 +336,7 @@ impl CallExpr {
             ))?;
 
             let mut args = vec![];
-            for _ in (0..arity) {
+            for _ in 0..arity {
                 let arg = CallExpr::parse(tokens, context)?;
                 args.push(arg);
             }

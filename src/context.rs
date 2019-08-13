@@ -1,4 +1,3 @@
-use crate::lexer::Operator;
 use crate::parser::{AST, Function};
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -28,31 +27,6 @@ impl Symbol {
 
 pub struct Context {
     symbols: HashMap<String, Symbol>,
-}
-
-#[derive(Debug, PartialEq)]
-enum Value {
-    Number(f32), // Literal or value of variable
-    Placeholder(usize), // Function arg, `usize` is index of argument
-}
-
-#[derive(Debug, PartialEq)]
-enum Expression {
-    Value(Value),
-    Op(Operator, Box<Expression>, Box<Expression>),
-}
-
-impl Expression {
-    /// Top level perator priority:
-    /// no operator (also bracketed) = 0
-    /// Add/Sub = 1
-    /// Mul/Div/Mod = 2
-    fn priority(&self) -> u8 {
-        match self {
-            Expression::Value(_) => 0,
-            Expression::Op(op, _, _) => op.priority(),
-        }
-    }
 }
 
 impl Context {

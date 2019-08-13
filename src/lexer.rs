@@ -23,19 +23,6 @@ impl Operator {
     }
 }
 
-impl Operator {
-    /// Operator priority:
-    /// no operator = 0
-    /// Mul/Div/Mod = 1
-    /// Add/Sub = 2
-    pub fn priority(&self) -> u8 {
-        match self {
-            Operator::Add | Operator::Sub => 2,
-            Operator::Mul | Operator::Div | Operator::Mod => 1
-        }
-    }
-}
-
 #[derive(Debug, PartialEq)]
 pub enum Token {
     Id(String),

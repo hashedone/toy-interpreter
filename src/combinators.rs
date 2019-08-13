@@ -1,4 +1,4 @@
-use crate::{Operator, Factor, Result, Assignment, Token};
+use crate::{Operator, Result, Token};
 
 #[derive(Debug, PartialEq)]
 pub struct ParseProgress<'a, T> {
