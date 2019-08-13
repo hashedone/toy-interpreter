@@ -1,4 +1,4 @@
-use crate::parser::{AST, Function};
+use crate::parser::{Function, AST};
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -37,11 +37,14 @@ impl Context {
     }
 
     pub fn function_ctx(args: Vec<String>, parent: &Context) -> Self {
-        let functions = parent.symbols.iter()
+        let functions = parent
+            .symbols
+            .iter()
             .filter(|(_, item)| item.is_func())
             .map(|(name, item)| (name.clone(), item.clone()));
 
-        let args = args.into_iter()
+        let args = args
+            .into_iter()
             .enumerate()
             .map(|(idx, var)| (var, Symbol::Argument(idx)));
 
@@ -51,10 +54,11 @@ impl Context {
     }
 
     pub fn update_var(&mut self, var: impl ToString, val: f32) {
-        self.symbols.entry(var.to_string())
+        self.symbols
+            .entry(var.to_string())
             .and_modify(|v| match v {
                 Symbol::Variable(ref mut v) => {
-                     *v = val;
+                    *v = val;
                 }
                 _ => (),
             })
@@ -62,18 +66,16 @@ impl Context {
     }
 
     pub fn update_func(&mut self, func: &Function) {
-        self.symbols.entry(func.name.clone())
+        self.symbols
+            .entry(func.name.clone())
             .and_modify(|v| match v {
                 Symbol::Function(ref mut arity, ref mut expr) => {
                     *arity = func.arity;
                     *expr = func.expr.clone();
-                },
+                }
                 _ => (),
             })
-            .or_insert_with(|| Symbol::Function(
-                func.arity,
-                func.expr.clone()
-            ));
+            .or_insert_with(|| Symbol::Function(func.arity, func.expr.clone()));
     }
 
     pub fn is_var(&self, var: &str) -> bool {
@@ -112,5 +114,3 @@ impl Context {
         }
     }
 }
-
-

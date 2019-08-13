@@ -1,12 +1,14 @@
-use std::iter::Peekable;
+use crate::{Context, Operator, Result, Token};
 use std::any::Any;
+use std::iter::Peekable;
 use std::rc::Rc;
-use crate::{Token, Context, Result, Operator};
 
 pub trait AST: std::fmt::Debug {
     fn as_any(&self) -> &dyn Any;
     fn is_same(&self, other: &dyn AST) -> bool;
-    fn arity(&self) -> usize { 0 }
+    fn arity(&self) -> usize {
+        0
+    }
 
     /// Used to return value if known without any context
     fn value(&self) -> Option<f32>;
@@ -25,7 +27,7 @@ enum Terminal {
 struct OpExpr {
     op: Operator,
     left: Box<dyn AST>,
-    right: Box<dyn AST>
+    right: Box<dyn AST>,
 }
 
 #[derive(Debug)]
@@ -42,15 +44,21 @@ pub struct Function {
 }
 
 impl AST for Terminal {
-    fn as_any(&self) -> &dyn Any { self }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 
     fn is_same(&self, other: &dyn AST) -> bool {
-        other.as_any().downcast_ref::<Self>().map_or(false, |o| match (self, o) {
-            (Terminal::Value(x), Terminal::Value(y)) => x == y,
-            (Terminal::Assign(v1, val1), Terminal::Assign(v2, val2)) =>
-                v1 == v2 && val1.is_same(val2.as_ref()),
-            _ => false,
-        })
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |o| match (self, o) {
+                (Terminal::Value(x), Terminal::Value(y)) => x == y,
+                (Terminal::Assign(v1, val1), Terminal::Assign(v2, val2)) => {
+                    v1 == v2 && val1.is_same(val2.as_ref())
+                }
+                _ => false,
+            })
     }
 
     fn value(&self) -> Option<f32> {
@@ -75,13 +83,15 @@ impl AST for Terminal {
 }
 
 impl AST for OpExpr {
-    fn as_any(&self) -> &dyn Any { self }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 
     fn is_same(&self, other: &dyn AST) -> bool {
         if let Some(other) = other.as_any().downcast_ref::<Self>() {
-            self.op == other.op &&
-            self.left.is_same(other.left.as_ref()) &&
-            self.right.is_same(other.right.as_ref())
+            self.op == other.op
+                && self.left.is_same(other.left.as_ref())
+                && self.right.is_same(other.right.as_ref())
         } else {
             false
         }
@@ -107,7 +117,9 @@ impl AST for OpExpr {
 }
 
 impl AST for CallExpr {
-    fn as_any(&self) -> &dyn Any { self }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 
     fn is_same(&self, other: &dyn AST) -> bool {
         if other.as_any().downcast_ref::<Self>().is_some() {
@@ -122,7 +134,9 @@ impl AST for CallExpr {
     }
 
     fn evaluate(&self, context: &mut Context, args: &[f32]) -> Option<f32> {
-        let args: Option<Vec<_>> = self.args.iter()
+        let args: Option<Vec<_>> = self
+            .args
+            .iter()
             .map(|arg| arg.evaluate(context, args))
             .collect();
         let args = args?;
@@ -132,13 +146,15 @@ impl AST for CallExpr {
 }
 
 impl AST for Function {
-    fn as_any(&self) -> &dyn Any { self }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 
     fn is_same(&self, other: &dyn AST) -> bool {
         if let Some(other) = other.as_any().downcast_ref::<Self>() {
-            self.name == other.name &&
-            self.arity == other.arity &&
-            self.expr.is_same(other.expr.as_ref())
+            self.name == other.name
+                && self.arity == other.arity
+                && self.expr.is_same(other.expr.as_ref())
         } else {
             false
         }
@@ -156,14 +172,11 @@ impl AST for Function {
 
 impl Terminal {
     fn parse(
-        tokens: &mut Peekable<impl Iterator<Item=Token>>,
+        tokens: &mut Peekable<impl Iterator<Item = Token>>,
         context: &Context,
-    ) -> Result<Box<dyn AST>>
-    {
+    ) -> Result<Box<dyn AST>> {
         match tokens.next() {
-            Some(Token::Number(x)) => {
-                Ok(Box::new(Terminal::Value(x)))
-            },
+            Some(Token::Number(x)) => Ok(Box::new(Terminal::Value(x))),
             Some(Token::LBracket) => {
                 tokens.next();
                 let expr = OpExpr::parse(tokens, context)?;
@@ -171,12 +184,9 @@ impl Terminal {
                     tokens.next();
                     Ok(expr)
                 } else {
-                    Err(format!(
-                        "Invalid token {:?}, expected `)`",
-                        tokens.next()
-                    ))
+                    Err(format!("Invalid token {:?}, expected `)`", tokens.next()))
                 }
-            },
+            }
             Some(Token::Assign(var)) => {
                 if context.is_var(&var) {
                     let expr = CallExpr::parse(tokens, context)?;
@@ -187,7 +197,7 @@ impl Terminal {
                         var
                     ))
                 }
-            },
+            }
             Some(Token::Id(var)) => {
                 if let Some(var) = context.get_var(&var) {
                     Ok(Box::new(Terminal::Value(var)))
@@ -200,12 +210,10 @@ impl Terminal {
                     ))
                 }
             }
-            Some(token) => {
-                Err(format!(
-                    "Unexpected token while parsing terminal expression: {:?}",
-                    token
-                ))
-            }
+            Some(token) => Err(format!(
+                "Unexpected token while parsing terminal expression: {:?}",
+                token
+            )),
             None => {
                 Err("Unexpected end of tokens list while parsing terminal expression".to_owned())
             }
@@ -215,15 +223,13 @@ impl Terminal {
 
 impl OpExpr {
     fn get_next_multiplicative(
-        tokens: &mut Peekable<impl Iterator<Item=Token>>
-    )
-        -> Option<Operator>
-    {
+        tokens: &mut Peekable<impl Iterator<Item = Token>>,
+    ) -> Option<Operator> {
         match tokens.peek() {
             Some(Token::Operator(Operator::Mul)) => {
                 tokens.next();
                 Some(Operator::Mul)
-            },
+            }
             Some(Token::Operator(Operator::Div)) => {
                 tokens.next();
                 Some(Operator::Div)
@@ -237,10 +243,9 @@ impl OpExpr {
     }
 
     fn parse_multiplicative(
-        tokens: &mut Peekable<impl Iterator<Item=Token>>,
+        tokens: &mut Peekable<impl Iterator<Item = Token>>,
         context: &Context,
-    ) -> Result<Box<dyn AST>>
-    {
+    ) -> Result<Box<dyn AST>> {
         let mut result = Terminal::parse(tokens, context)?;
 
         while let Some(op) = Self::get_next_multiplicative(tokens) {
@@ -259,16 +264,12 @@ impl OpExpr {
         Ok(result)
     }
 
-    fn get_next_additive(
-        tokens: &mut Peekable<impl Iterator<Item=Token>>
-    )
-        -> Option<Operator>
-    {
+    fn get_next_additive(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Option<Operator> {
         match tokens.peek() {
             Some(Token::Operator(Operator::Add)) => {
                 tokens.next();
                 Some(Operator::Add)
-            },
+            }
             Some(Token::Operator(Operator::Sub)) => {
                 tokens.next();
                 Some(Operator::Sub)
@@ -278,10 +279,9 @@ impl OpExpr {
     }
 
     fn parse_additive(
-        tokens: &mut Peekable<impl Iterator<Item=Token>>,
+        tokens: &mut Peekable<impl Iterator<Item = Token>>,
         context: &Context,
-    ) -> Result<Box<dyn AST>>
-    {
+    ) -> Result<Box<dyn AST>> {
         let mut result = Self::parse_multiplicative(tokens, context)?;
 
         while let Some(op) = Self::get_next_additive(tokens) {
@@ -301,17 +301,16 @@ impl OpExpr {
     }
 
     fn parse(
-        tokens: &mut Peekable<impl Iterator<Item=Token>>,
+        tokens: &mut Peekable<impl Iterator<Item = Token>>,
         context: &Context,
-    ) -> Result<Box<dyn AST>>
-    {
+    ) -> Result<Box<dyn AST>> {
         Self::parse_additive(tokens, context)
     }
 }
 
 impl CallExpr {
     fn get_func(
-        tokens: &mut Peekable<impl Iterator<Item=Token>>,
+        tokens: &mut Peekable<impl Iterator<Item = Token>>,
         context: &Context,
     ) -> Option<String> {
         if let Some(Token::Id(f)) = tokens.peek() {
@@ -319,21 +318,23 @@ impl CallExpr {
                 let name = f.clone();
                 tokens.next();
                 Some(name)
-            } else { None }
-        } else { None }
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
 
     fn parse(
-        tokens: &mut Peekable<impl Iterator<Item=Token>>,
+        tokens: &mut Peekable<impl Iterator<Item = Token>>,
         context: &Context,
-    ) -> Result<Box<dyn AST>>
-    {
+    ) -> Result<Box<dyn AST>> {
         if let Some(name) = Self::get_func(tokens, context) {
             let arity = context.get_arity(&name).unwrap_or(0);
-            let func = context.get_func(&name).ok_or(format!(
-                "No function named {}",
-                name
-            ))?;
+            let func = context
+                .get_func(&name)
+                .ok_or(format!("No function named {}", name))?;
 
             let mut args = vec![];
             for _ in 0..arity {
@@ -349,29 +350,25 @@ impl CallExpr {
 }
 
 impl Function {
-    fn get_id(tokens: &mut Peekable<impl Iterator<Item=Token>>)
-        -> Option<String>
-    {
+    fn get_id(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Option<String> {
         match tokens.peek() {
             Some(Token::Id(id)) => {
                 let id = id.clone();
                 tokens.next();
                 Some(id)
-            },
+            }
             _ => None,
         }
     }
 
     fn parse(
-        tokens: &mut Peekable<impl Iterator<Item=Token>>,
+        tokens: &mut Peekable<impl Iterator<Item = Token>>,
         context: &Context,
-    ) -> Result<Box<dyn AST>>
-    {
-        let name = Self::get_id(tokens)
-            .ok_or(format!(
-                "Expected function name, but got: {:?}",
-                tokens.peek()
-            ))?;
+    ) -> Result<Box<dyn AST>> {
+        let name = Self::get_id(tokens).ok_or(format!(
+            "Expected function name, but got: {:?}",
+            tokens.peek()
+        ))?;
 
         if !context.is_func(&name) {
             return Err(format!(
@@ -398,21 +395,13 @@ impl Function {
 }
 
 impl Context {
-    pub fn parse(&self, tokens: impl Iterator<Item=Token>)
-        -> Result<Box<dyn AST>>
-    {
+    pub fn parse(&self, tokens: impl Iterator<Item = Token>) -> Result<Box<dyn AST>> {
         let tokens: Vec<_> = tokens.collect();
 
         if tokens.contains(&Token::Func) {
-            Function::parse(
-                &mut tokens.into_iter().peekable(),
-                self,
-            )
+            Function::parse(&mut tokens.into_iter().peekable(), self)
         } else {
-            CallExpr::parse(
-                &mut tokens.into_iter().peekable(),
-                self
-            )
+            CallExpr::parse(&mut tokens.into_iter().peekable(), self)
         }
     }
 }
@@ -420,125 +409,92 @@ impl Context {
 #[cfg(test)]
 mod test {
 
-use super::*;
+    use super::*;
 
-fn tokenize<'a>(src: &'a str) -> Peekable<impl Iterator<Item=Token> + 'a> {
-    use crate::lexer::tokenize;
+    fn tokenize<'a>(src: &'a str) -> Peekable<impl Iterator<Item = Token> + 'a> {
+        use crate::lexer::tokenize;
 
-    tokenize(src)
-        .map(|t| t.unwrap())
-        .peekable()
-}
+        tokenize(src).map(|t| t.unwrap()).peekable()
+    }
 
-#[test]
-fn test_terminal_number() {
-    let number = Terminal::parse(&mut tokenize("10"), &Context::new()).unwrap();
-    let expected = Terminal::Value(10.0);
-    assert!(expected.is_same(number.as_ref()));
-}
+    #[test]
+    fn test_terminal_number() {
+        let number = Terminal::parse(&mut tokenize("10"), &Context::new()).unwrap();
+        let expected = Terminal::Value(10.0);
+        assert!(expected.is_same(number.as_ref()));
+    }
 
-#[test]
-fn test_terminal_assignment() {
-    let assign = Terminal::parse(&mut tokenize("a = 10 + 2"), &Context::new()).unwrap();
-    let expected = Terminal::Assign(
-        "a".to_string(),
-        Box::new(Terminal::Value(12.0))
-    );
-    assert!(expected.is_same(assign.as_ref()));
+    #[test]
+    fn test_terminal_assignment() {
+        let assign = Terminal::parse(&mut tokenize("a = 10 + 2"), &Context::new()).unwrap();
+        let expected = Terminal::Assign("a".to_string(), Box::new(Terminal::Value(12.0)));
+        assert!(expected.is_same(assign.as_ref()));
 
-    let assign = OpExpr::parse(&mut tokenize("2 + a = 10"), &Context::new()).unwrap();
-    let expected = OpExpr {
-        op: Operator::Add,
-        left: Box::new(Terminal::Value(2.0)),
-        right: Box::new(Terminal::Assign(
-            "a".to_string(),
-            Box::new(Terminal::Value(10.0)),
-        )),
-    };
-    assert!(expected.is_same(assign.as_ref()));
-}
+        let assign = OpExpr::parse(&mut tokenize("2 + a = 10"), &Context::new()).unwrap();
+        let expected = OpExpr {
+            op: Operator::Add,
+            left: Box::new(Terminal::Value(2.0)),
+            right: Box::new(Terminal::Assign(
+                "a".to_string(),
+                Box::new(Terminal::Value(10.0)),
+            )),
+        };
+        assert!(expected.is_same(assign.as_ref()));
+    }
 
-#[test]
-fn text_op_expr_mul() {
-    let expr = OpExpr::parse_multiplicative(
-        &mut tokenize("10"),
-        &Context::new()
-    ).unwrap();
-    let expected = Terminal::Value(10.0);
-    assert!(expected.is_same(expr.as_ref()));
+    #[test]
+    fn text_op_expr_mul() {
+        let expr = OpExpr::parse_multiplicative(&mut tokenize("10"), &Context::new()).unwrap();
+        let expected = Terminal::Value(10.0);
+        assert!(expected.is_same(expr.as_ref()));
 
-    let expr = OpExpr::parse_multiplicative(
-        &mut tokenize("10 * 2"),
-        &Context::new()
-    ).unwrap();
+        let expr = OpExpr::parse_multiplicative(&mut tokenize("10 * 2"), &Context::new()).unwrap();
 
-    let expected = Terminal::Value(20.0);
-    assert!(expected.is_same(expr.as_ref()));
+        let expected = Terminal::Value(20.0);
+        assert!(expected.is_same(expr.as_ref()));
 
-    let expr = OpExpr::parse_multiplicative(
-        &mut tokenize("10 / 2"),
-        &Context::new()
-    ).unwrap();
+        let expr = OpExpr::parse_multiplicative(&mut tokenize("10 / 2"), &Context::new()).unwrap();
 
-    let expected = Terminal::Value(5.0);
-    assert!(expected.is_same(expr.as_ref()));
+        let expected = Terminal::Value(5.0);
+        assert!(expected.is_same(expr.as_ref()));
 
-    let expr = OpExpr::parse_multiplicative(
-        &mut tokenize("10 % 2"),
-        &Context::new()
-    ).unwrap();
+        let expr = OpExpr::parse_multiplicative(&mut tokenize("10 % 2"), &Context::new()).unwrap();
 
-    let expected = Terminal::Value(0.0);
-    assert!(expected.is_same(expr.as_ref()));
+        let expected = Terminal::Value(0.0);
+        assert!(expected.is_same(expr.as_ref()));
 
-    let expr = OpExpr::parse_multiplicative(
-        &mut tokenize("11 % 2 * 5 / 3"),
-        &Context::new()
-    ).unwrap();
+        let expr =
+            OpExpr::parse_multiplicative(&mut tokenize("11 % 2 * 5 / 3"), &Context::new()).unwrap();
 
-    let expected = Terminal::Value(5.0f32 / 3.0f32);
-    assert!(expected.is_same(expr.as_ref()));
-}
+        let expected = Terminal::Value(5.0f32 / 3.0f32);
+        assert!(expected.is_same(expr.as_ref()));
+    }
 
-#[test]
-fn text_op_expr_add() {
-    let expr = OpExpr::parse_additive(
-        &mut tokenize("10"),
-        &Context::new()
-    ).unwrap();
-    let expected = Terminal::Value(10.0);
-    assert!(expected.is_same(expr.as_ref()));
+    #[test]
+    fn text_op_expr_add() {
+        let expr = OpExpr::parse_additive(&mut tokenize("10"), &Context::new()).unwrap();
+        let expected = Terminal::Value(10.0);
+        assert!(expected.is_same(expr.as_ref()));
 
-    let expr = OpExpr::parse_additive(
-        &mut tokenize("10 + 2"),
-        &Context::new()
-    ).unwrap();
+        let expr = OpExpr::parse_additive(&mut tokenize("10 + 2"), &Context::new()).unwrap();
 
-    let expected = Terminal::Value(12.0);
-    assert!(expected.is_same(expr.as_ref()));
+        let expected = Terminal::Value(12.0);
+        assert!(expected.is_same(expr.as_ref()));
 
-    let expr = OpExpr::parse_additive(
-        &mut tokenize("10 - 2"),
-        &Context::new()
-    ).unwrap();
+        let expr = OpExpr::parse_additive(&mut tokenize("10 - 2"), &Context::new()).unwrap();
 
-    let expected = Terminal::Value(8.0);
-    assert!(expected.is_same(expr.as_ref()));
+        let expected = Terminal::Value(8.0);
+        assert!(expected.is_same(expr.as_ref()));
 
-    let expr = OpExpr::parse_additive(
-        &mut tokenize("11 + 2 - 5"),
-        &Context::new()
-    ).unwrap();
+        let expr = OpExpr::parse_additive(&mut tokenize("11 + 2 - 5"), &Context::new()).unwrap();
 
-    let expected = Terminal::Value(8.0f32);
-    assert!(expected.is_same(expr.as_ref()));
+        let expected = Terminal::Value(8.0f32);
+        assert!(expected.is_same(expr.as_ref()));
 
-    let expr = OpExpr::parse_additive(
-        &mut tokenize("10 * 3 - 6 / 2"),
-        &Context::new()
-    ).unwrap();
+        let expr =
+            OpExpr::parse_additive(&mut tokenize("10 * 3 - 6 / 2"), &Context::new()).unwrap();
 
-    let expected = Terminal::Value(27.0);;
-    assert!(expected.is_same(expr.as_ref()));
-}
+        let expected = Terminal::Value(27.0);;
+        assert!(expected.is_same(expr.as_ref()));
+    }
 }
