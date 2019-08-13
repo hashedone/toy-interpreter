@@ -1,3 +1,4 @@
+use crate::Result;
 use crate::combinators::next_token;
 use std::iter;
 
@@ -47,7 +48,7 @@ pub enum Token {
 }
 
 pub fn tokenize<'a>(mut src: &'a str)
-    -> impl Iterator<Item=Result<Token, String>> + 'a
+    -> impl Iterator<Item=Result<Token>> + 'a
 {
     iter::from_fn(move || {
         match next_token(src) {
