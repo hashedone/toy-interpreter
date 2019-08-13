@@ -22,3 +22,49 @@ There is not clear if function may be called from another function. Logically it
 On the other hand if functions would be treaten in same way as variables, its clear, that functions may not call other function, because they cannot be passed in arguments (functions aren't values in this language).
 
 From comments on Kata its clear, that there are no tests calling function from another functions, so secons approach would make things easy, but I don't like this approach - it is inconvinient. I decided to just inline all functions called from other functions.
+
+# Syntax
+
+## Expressions:
+```
+2 + 3
+= 5
+4 - 3
+= 1
+2 * 0.75
+= 1
+3 / 2
+= 1
+3 % 2
+= 1
+```
+
+## Variables
+```
+a = 4
+= 4
+a
+= 4
+a + 1
+= 5
+a
+= 4
+a = a + 1
+= 5
+a
+= 5
+```
+
+## Functions
+```
+add a b => a + b
+()
+add 1 2
+= 3
+add add 1 2 3
+= 6
+add3 a b c => add add a b c
+= ()
+add3 1 2 3
+= 6
+```
